@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Operativo — Motor de Precios</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
+  <style>
+    :root {
+      --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --radius-md: 8px;
+      --radius-lg: 10px;
+      --bg: #ffffff;
+      --bg2: #f5f7fa;
+      --bg3: #eef3f7;
+      --border: #e1e7ef;
+      --border2: #cad3df;
+      --txt1: #142033;
+      --txt2: #42526a;
+      --txt3: #708197;
+      --info: #0c447c;
+      --up: #27500a;
+      --up-bg: #eaf3de;
+      --down: #791f1f;
+      --down-bg: #fcebeb;
+      --neutral: #708197;
+      --warn: #633806;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg3); font-family: var(--font-sans); color: var(--txt1); font-size: 13px; }
+    button, input, select { font-family: inherit; }
+    input:focus, select:focus { outline: none; border-color: #85b7eb !important; box-shadow: 0 0 0 3px rgba(133,183,235,.22); }
+
+    /* ── TOP BAR ── */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: #0c1f38;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 48px;
+      border-bottom: 1px solid #1a3356;
+    }
+    .topbar-brand { display: flex; align-items: center; gap: 10px; }
+    .topbar-brand span { font-size: 14px; font-weight: 600; color: #e6f1fb; letter-spacing: -0.01em; }
+    .topbar-brand small { font-size: 11px; color: #708197; font-weight: 400; margin-left: 4px; }
+    .topbar-right { display: flex; align-items: center; gap: 16px; }
+    .clock { font-size: 12px; color: #a0b4cc; font-variant-numeric: tabular-nums; }
+
+    /* ── VARIATION BAR ── */
+    .varbar {
+      position: sticky; top: 48px; z-index: 99;
+      background: var(--bg);
+      border-bottom: 0.5px solid var(--border);
+      padding: 10px 24px;
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .varbar-label { font-size: 11px; font-weight: 500; color: var(--txt3); letter-spacing: .06em; text-transform: uppercase; margin-right: 4px; }
+    .var-pill {
+      display: flex; align-items: center; gap: 0;
+      border: 0.5px solid var(--border2); border-radius: 20px;
+      overflow: hidden; background: var(--bg2);
+    }
+    .var-pill .region-tag {
+      padding: 5px 10px; font-size: 11px; font-weight: 600;
+      color: var(--txt2); background: var(--bg2);
+      border-right: 0.5px solid var(--border);
+      white-space: nowrap;
+    }
+    .var-pill input {
+      width: 68px; padding: 5px 6px; border: none; background: transparent;
+      font-size: 13px; font-weight: 500; text-align: right;
+    }
+    .var-pill .suf { font-size: 11px; color: var(--txt3); padding-right: 8px; }
+    .var-pill.up { border-color: #b5d89a; background: var(--up-bg); }
+    .var-pill.up .region-tag { background: var(--up-bg); border-color: #b5d89a; color: var(--up); }
+    .var-pill.up input { color: var(--up); }
+    .var-pill.down { border-color: #f09595; background: var(--down-bg); }
+    .var-pill.down .region-tag { background: var(--down-bg); border-color: #f09595; color: var(--down); }
+    .var-pill.down input { color: var(--down); }
+
+    /* ── MAIN CONTENT ── */
+    .content { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
+
+    /* ── REGION SECTION ── */
+    .region-section {}
+    .region-header {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+    }
+    .region-name { font-size: 12px; font-weight: 600; color: var(--txt3); letter-spacing: .08em; text-transform: uppercase; }
+    .region-divider { flex: 1; height: 0.5px; background: var(--border); }
+    .region-count { font-size: 11px; color: var(--txt3); }
+
+    /* ── STRATEGY CARDS GRID ── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 10px;
+    }
+    .card {
+      background: var(--bg);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .card-head {
+      padding: 10px 14px;
+      background: var(--bg2);
+      border-bottom: 0.5px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-head-left { display: flex; align-items: center; gap: 6px; }
+    .badge {
+      font-size: 10px; font-weight: 600; padding: 2px 7px;
+      border-radius: 20px; letter-spacing: .02em;
+    }
+    .badge-canal { background: #e6f1fb; color: var(--info); }
+    .badge-zona  { background: var(--bg3); color: var(--txt2); }
+    .badge-seg   { background: #f0f5e8; color: var(--up); }
+    .card-head-seg { font-size: 11px; color: var(--txt3); }
+
+    /* SKU TABLE */
+    .sku-table { width: 100%; border-collapse: collapse; }
+    .sku-table thead tr { background: transparent; }
+    .sku-table th {
+      padding: 6px 14px; font-size: 10px; font-weight: 500;
+      color: var(--txt3); letter-spacing: .05em; text-transform: uppercase;
+      text-align: left; border-bottom: 0.5px solid var(--border);
+    }
+    .sku-table th.num { text-align: right; }
+    .sku-table td {
+      padding: 8px 14px; border-bottom: 0.5px solid var(--border);
+      vertical-align: middle;
+    }
+    .sku-table tr:last-child td { border-bottom: none; }
+    .sku-name { font-size: 12px; color: var(--txt2); }
+    .price-cell { text-align: right; }
+    .price-base { font-size: 12px; color: var(--txt3); }
+    .price-hoy  { font-size: 13px; font-weight: 500; }
+    .price-hoy.up   { color: var(--up); }
+    .price-hoy.down { color: var(--down); }
+    .price-hoy.flat { color: var(--txt2); }
+    .delta {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 11px; font-weight: 500; padding: 2px 6px;
+      border-radius: 20px; white-space: nowrap;
+    }
+    .delta.up   { background: var(--up-bg);   color: var(--up); }
+    .delta.down { background: var(--down-bg); color: var(--down); }
+    .delta.flat { background: var(--bg2);     color: var(--txt3); }
+    .factor-badge {
+      font-size: 10px; color: var(--txt3); background: var(--bg2);
+      border: 0.5px solid var(--border); border-radius: 4px;
+      padding: 1px 4px; margin-left: 4px;
+    }
+
+    /* ── SUMMARY FOOTER ── */
+    .summary-bar {
+      position: sticky; bottom: 0; z-index: 99;
+      background: var(--bg); border-top: 0.5px solid var(--border);
+      padding: 8px 24px;
+      display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+    }
+    .stat { display: flex; align-items: baseline; gap: 5px; }
+    .stat-val { font-size: 15px; font-weight: 600; }
+    .stat-lbl { font-size: 11px; color: var(--txt3); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    /* ── DATOS DE EJEMPLO ─────────────────────────────────── */
+    const ESTRATEGIAS = [
+      {
+        id: 1, region: "Lima", canal: "Horizontal", zona: "Lima Norte", segmento: "Bodega",
+        productos: [
+          { skuId:"GR-MED", nombre:"Granel Med.",  base:5.50, factorVariacion:1 },
+          { skuId:"GR-MAY", nombre:"Granel Mdo.",  base:5.40, factorVariacion:1 },
+          { skuId:"EM-QUI", nombre:"Quincena",     base:6.20, factorVariacion:2 },
+        ]
+      },
+      {
+        id: 2, region: "Lima", canal: "Horizontal", zona: "Lima Sur", segmento: "Bodega",
+        productos: [
+          { skuId:"GR-MED", nombre:"Granel Med.",  base:5.50, factorVariacion:1 },
+          { skuId:"GR-POR", nombre:"Poroso",       base:4.80, factorVariacion:0 },
+          { skuId:"EM-COR", nombre:"Corral",       base:6.35, factorVariacion:1 },
+        ]
+      },
+      {
+        id: 3, region: "Lima", canal: "Mayorista", zona: "Lima Centro", segmento: "Mayorista",
+        productos: [
+          { skuId:"GR-MED", nombre:"Granel Med.",  base:5.45, factorVariacion:1 },
+          { skuId:"GR-MAY", nombre:"Granel Mdo.",  base:5.35, factorVariacion:1 },
+          { skuId:"EM-OCT", nombre:"Octena",       base:6.45, factorVariacion:2 },
+          { skuId:"EM-TRE", nombre:"Treintena",    base:6.10, factorVariacion:1.5 },
+        ]
+      },
+      {
+        id: 4, region: "Lima", canal: "Mercados", zona: "Callao", segmento: "Mercado",
+        productos: [
+          { skuId:"GR-MED", nombre:"Granel Med.",  base:5.50, factorVariacion:1 },
+          { skuId:"EM-QUI", nombre:"Quincena",     base:6.20, factorVariacion:2 },
+        ]
+      },
+      {
+        id: 5, region: "Arequipa", canal: "Horizontal", zona: "Arequipa Centro", segmento: "Bodega",
+        productos: [
+          { skuId:"GR-MED", nombre:"Granel Med.",  base:5.60, factorVariacion:1 },
+          { skuId:"EM-QUI", nombre:"Quincena",     base:6.30, factorVariacion:2 },
+        ]
+      },
+      {
+        id: 6, region: "Arequipa", canal: "Mayorista", zona: "Cayma", segmento: "Mayorista",
+        productos: [
+          { skuId:"GR-MED", nombre:"Granel Med.",  base:5.55, factorVariacion:1 },
+          { skuId:"GR-MAY", nombre:"Granel Mdo.",  base:5.45, factorVariacion:1 },
+          { skuId:"GR-POR", nombre:"Poroso",       base:4.85, factorVariacion:0 },
+        ]
+      },
+      {
+        id: 7, region: "Trujillo", canal: "Horizontal", zona: "Trujillo Centro", segmento: "Bodega",
+        productos: [
+          { skuId:"GR-MED", nombre:"Granel Med.",  base:5.55, factorVariacion:1 },
+          { skuId:"EM-COR", nombre:"Corral",       base:6.40, factorVariacion:1 },
+          { skuId:"EM-TRE", nombre:"Treintena",    base:6.15, factorVariacion:1.5 },
+        ]
+      },
+      {
+        id: 8, region: "Trujillo", canal: "Mercados", zona: "La Esperanza", segmento: "Mercado",
+        productos: [
+          { skuId:"GR-MED", nombre:"Granel Med.",  base:5.55, factorVariacion:1 },
+          { skuId:"GR-POR", nombre:"Poroso",       base:4.90, factorVariacion:0 },
+        ]
+      },
+      {
+        id: 9, region: "Pucallpa", canal: "Horizontal", zona: "Pucallpa Centro", segmento: "Bodega",
+        productos: [
+          { skuId:"GR-MED", nombre:"Granel Med.",  base:5.70, factorVariacion:1 },
+          { skuId:"EM-QUI", nombre:"Quincena",     base:6.50, factorVariacion:2 },
+        ]
+      },
+    ];
+
+    const REGIONES = [...new Set(ESTRATEGIAS.map(e => e.region))];
+
+    /* ── HELPERS ─────────────────────────────────────────── */
+    function fmt(n) { return n.toFixed(2); }
+    function efectivo(base, varDia, factor) { return base + varDia * factor; }
+    function delta(base, varDia, factor) { return varDia * factor; }
+
+    /* ── RELOJ ───────────────────────────────────────────── */
+    function Clock() {
+      const [t, setT] = useState(new Date());
+      useEffect(() => { const id = setInterval(() => setT(new Date()), 1000); return () => clearInterval(id); }, []);
+      const d = t.toLocaleDateString("es-PE", { day:"2-digit", month:"short", year:"numeric" });
+      const h = t.toLocaleTimeString("es-PE", { hour:"2-digit", minute:"2-digit", second:"2-digit" });
+      return <span className="clock">{d} · {h}</span>;
+    }
+
+    /* ── SKU ROW ─────────────────────────────────────────── */
+    function SkuRow({ prod, varDia }) {
+      const ef  = efectivo(prod.base, varDia, prod.factorVariacion);
+      const d   = delta(prod.base, varDia, prod.factorVariacion);
+      const dir = d > 0.001 ? "up" : d < -0.001 ? "down" : "flat";
+      const arrow = dir === "up" ? "↑" : dir === "down" ? "↓" : "";
+      const noAfecta = prod.factorVariacion === 0;
+      return (
+        <tr>
+          <td>
+            <span className="sku-name">{prod.nombre}</span>
+            {prod.factorVariacion !== 1 && (
+              <span className="factor-badge">×{prod.factorVariacion}</span>
+            )}
+          </td>
+          <td className="price-cell">
+            <span className="price-base">S/ {fmt(prod.base)}</span>
+          </td>
+          <td className="price-cell">
+            <span className={`price-hoy ${noAfecta ? "flat" : dir}`}>
+              S/ {fmt(ef)}
+            </span>
+          </td>
+          <td className="price-cell">
+            {noAfecta
+              ? <span className="delta flat">— fijo</span>
+              : <span className={`delta ${dir}`}>
+                  {arrow} {d >= 0 ? "+" : ""}{fmt(d)}
+                </span>
+            }
+          </td>
+        </tr>
+      );
+    }
+
+    /* ── STRATEGY CARD ───────────────────────────────────── */
+    function StrategyCard({ est, varDia }) {
+      return (
+        <div className="card">
+          <div className="card-head">
+            <div className="card-head-left">
+              <span className="badge badge-canal">{est.canal}</span>
+              <span className="badge badge-zona">{est.zona}</span>
+            </div>
+            <span className="badge badge-seg">{est.segmento}</span>
+          </div>
+          <table className="sku-table">
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th className="num">Base fija</th>
+                <th className="num">Precio hoy</th>
+                <th className="num">Δ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {est.productos.map(p => (
+                <SkuRow key={p.skuId} prod={p} varDia={varDia} />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    /* ── REGION SECTION ──────────────────────────────────── */
+    function RegionSection({ region, estrategias, variacion, onChange }) {
+      const varNum = parseFloat(variacion) || 0;
+      const dir    = varNum > 0 ? "up" : varNum < 0 ? "down" : "";
+      return (
+        <div className="region-section">
+          <div className="region-header">
+            <span className="region-name">{region}</span>
+            <span className="region-count">{estrategias.length} {estrategias.length === 1 ? "estrategia" : "estrategias"}</span>
+            <div className="region-divider" />
+          </div>
+          <div className="cards-grid">
+            {estrategias.map(e => (
+              <StrategyCard key={e.id} est={e} varDia={varNum} />
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    /* ── VARIATION PILL ──────────────────────────────────── */
+    function VarPill({ region, value, onChange }) {
+      const n   = parseFloat(value) || 0;
+      const dir = n > 0 ? "up" : n < 0 ? "down" : "";
+      return (
+        <div className={`var-pill ${dir}`}>
+          <span className="region-tag">{region}</span>
+          <input
+            type="number" step="0.01"
+            value={value}
+            onChange={e => onChange(e.target.value)}
+          />
+          <span className="suf">S/</span>
+        </div>
+      );
+    }
+
+    /* ── APP ─────────────────────────────────────────────── */
+    function App() {
+      const [variaciones, setVariaciones] = useState(
+        Object.fromEntries(REGIONES.map(r => [r, "0.00"]))
+      );
+      const setVar = (region, val) => setVariaciones(v => ({ ...v, [region]: val }));
+
+      // Summary stats
+      const totalEstrategias = ESTRATEGIAS.length;
+      const totalSkus = ESTRATEGIAS.reduce((acc, e) => acc + e.productos.length, 0);
+      const skusMovidos = ESTRATEGIAS.reduce((acc, e) => {
+        const varNum = parseFloat(variaciones[e.region]) || 0;
+        return acc + e.productos.filter(p => varNum !== 0 && p.factorVariacion !== 0).length;
+      }, 0);
+      const maxAlza = REGIONES.reduce((max, r) => {
+        const v = parseFloat(variaciones[r]) || 0;
+        return v > max ? v : max;
+      }, 0);
+
+      return (
+        <div>
+          {/* TOP BAR */}
+          <div className="topbar">
+            <div className="topbar-brand">
+              <i className="ti ti-egg" style={{ fontSize:18, color:"#85b7eb" }} />
+              <span>Motor de Precios <small>La Calera</small></span>
+            </div>
+            <div className="topbar-right">
+              <Clock />
+              <a href="index.html" style={{ fontSize:12, color:"#708197", textDecoration:"none", display:"flex", alignItems:"center", gap:5 }}>
+                <i className="ti ti-settings" style={{ fontSize:14 }} /> Configurar estrategia
+              </a>
+            </div>
+          </div>
+
+          {/* VARIATION BAR */}
+          <div className="varbar">
+            <span className="varbar-label">Variación del día</span>
+            {REGIONES.map(r => (
+              <VarPill key={r} region={r} value={variaciones[r]} onChange={v => setVar(r, v)} />
+            ))}
+            {Object.values(variaciones).some(v => parseFloat(v) !== 0) && (
+              <button
+                onClick={() => setVariaciones(Object.fromEntries(REGIONES.map(r => [r, "0.00"])))}
+                style={{ fontSize:11, padding:"4px 10px", borderRadius:20, border:"0.5px solid var(--border2)", background:"none", cursor:"pointer", color:"var(--txt3)" }}>
+                Resetear todo
+              </button>
+            )}
+          </div>
+
+          {/* MAIN CONTENT */}
+          <div className="content">
+            {REGIONES.map(region => {
+              const ests = ESTRATEGIAS.filter(e => e.region === region);
+              return (
+                <RegionSection
+                  key={region}
+                  region={region}
+                  estrategias={ests}
+                  variacion={variaciones[region]}
+                  onChange={v => setVar(region, v)}
+                />
+              );
+            })}
+          </div>
+
+          {/* SUMMARY FOOTER */}
+          <div className="summary-bar">
+            <div className="stat">
+              <span className="stat-val">{totalEstrategias}</span>
+              <span className="stat-lbl">estrategias activas</span>
+            </div>
+            <div className="stat">
+              <span className="stat-val">{totalSkus}</span>
+              <span className="stat-lbl">SKUs configurados</span>
+            </div>
+            <div className="stat">
+              <span className="stat-val" style={{ color: skusMovidos > 0 ? "var(--up)" : "var(--txt3)" }}>{skusMovidos}</span>
+              <span className="stat-lbl">SKUs con precio actualizado hoy</span>
+            </div>
+            {maxAlza > 0 && (
+              <div className="stat">
+                <span className="stat-val" style={{ color:"var(--up)" }}>+S/ {fmt(maxAlza)}</span>
+                <span className="stat-lbl">mayor alza del día</span>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>

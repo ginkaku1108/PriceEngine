@@ -1,0 +1,1046 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Estrategia de precios La Calera</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
+    <style>
+      :root {
+        --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --border-radius-md: 8px;
+        --border-radius-lg: 10px;
+        --color-background-primary: #ffffff;
+        --color-background-secondary: #f5f7fa;
+        --color-background-info: #e6f1fb;
+        --color-border-secondary: #cad3df;
+        --color-border-tertiary: #e1e7ef;
+        --color-border-info: #85b7eb;
+        --color-text-primary: #142033;
+        --color-text-secondary: #42526a;
+        --color-text-tertiary: #708197;
+        --color-text-info: #0c447c;
+        --color-text-success: #27500a;
+        --color-text-warning: #633806;
+        --color-text-danger: #791f1f;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: #eef3f7;
+        font-family: var(--font-sans);
+      }
+
+      #root {
+        width: min(1060px, calc(100vw - 32px));
+        margin: 24px auto;
+        padding: 24px;
+        background: var(--color-background-primary);
+        border: 0.5px solid var(--color-border-tertiary);
+        border-radius: 12px;
+        box-shadow: 0 18px 50px rgba(20, 32, 51, 0.09);
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      button,
+      input,
+      select {
+        font-family: inherit;
+      }
+
+      button:hover:not(:disabled) {
+        filter: brightness(0.98);
+      }
+
+      input:focus,
+      select:focus {
+        border-color: #85b7eb !important;
+        box-shadow: 0 0 0 3px rgba(133, 183, 235, 0.22);
+      }
+
+      @media (max-width: 820px) {
+        #root {
+          width: 100%;
+          margin: 0;
+          padding: 18px;
+          border-radius: 0;
+          border-left: 0;
+          border-right: 0;
+        }
+
+        [style*="grid-template-columns"] {
+          grid-template-columns: 1fr !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="text/babel">
+      const { useState } = React;
+
+      const REGIONES = ["Lima", "Arequipa", "Trujillo", "Pucallpa"];
+      const CANALES = ["Mayorista", "Mercados", "Horizontal"];
+      
+      const ZONAS_POR_OFICINA = {
+        Lima: ["Lima Norte", "Lima Este", "Lima Sur", "Lima Centro", "Callao"],
+        Arequipa: ["Arequipa Centro", "Cayma", "Bustamante", "Cerro Colorado"],
+        Trujillo: ["Trujillo Centro", "La Esperanza", "El Porvenir", "Victor Larco"],
+        Pucallpa: ["Pucallpa Centro", "Yarinacocha", "Manantay"],
+      };
+
+      const getZonas = (oficina, canal) => {
+        return ZONAS_POR_OFICINA[oficina] || ZONAS_POR_OFICINA.Lima;
+      };
+
+      const RUTAS = [
+        { id: "NORTE01", nombre: "NORTE01 (Cono Norte)" },
+        { id: "SUR03", nombre: "SUR03 (Cono Sur)" },
+        { id: "CENTRO04", nombre: "CENTRO04 (Cercado)" },
+        { id: "ESTE02", nombre: "ESTE02 (Cono Este)" }
+      ];
+
+      const MODULOS = [
+        { id: "Norte01 lunes", nombre: "Norte01 Lunes" },
+        { id: "SUR03 - LUNES", nombre: "SUR03 Lunes" },
+        { id: "SUR03 - VIERNES", nombre: "SUR03 Viernes" },
+        { id: "CENTRO04 - MARTES", nombre: "CENTRO04 Martes" },
+        { id: "ESTE02 - JUEVES", nombre: "ESTE02 Jueves" }
+      ];
+
+      const CLIENTES = [
+        { id: "CLI-01", nombre: "Distribuidora San Juan" },
+        { id: "CLI-02", nombre: "Mercado Central Módulo 5" },
+        { id: "CLI-03", nombre: "Bodega Doña Maria" },
+        { id: "CLI-04", nombre: "Supermercado El Sol" }
+      ];
+
+      const CATEGORIAS = ["Granel", "Empacado"];
+      const SKUS = [
+        { id:"GR-MED", nombre:"Granel-Med. (10.4/10.60 Kl.)", categoria:"Granel" },
+        { id:"GR-MAY", nombre:"Granel-Mdo May. (11.8 Kl.)", categoria:"Granel" },
+        { id:"GR-POR", nombre:"Huevo Poroso / Sucio", categoria:"Granel" },
+        { id:"EM-QUI", nombre:"Quincena", categoria:"Empacado" },
+        { id:"EM-COR", nombre:"Corral", categoria:"Empacado" },
+        { id:"EM-OCT", nombre:"Octena", categoria:"Empacado" },
+        { id:"EM-TRE", nombre:"Treintena", categoria:"Empacado" },
+      ];
+      const SEGMENTOS = ["Cuenta Clave","Autoservicio","Mayorista","Mercado","Horizontal","Bodega","Hotel / Restaurante"];
+
+      const initState = () => ({
+        region: "Lima", canal: "Horizontal", segmento: "Bodega",
+        ajusteOficina: "0.00",
+        ajusteCanal: "0.00",
+        variacionDia: "0.00",
+        descuentoGerencia: "",
+        minJabasGerencia: "0",
+        zona: { plaza: getZonas("Lima", "Horizontal")[0], modulo: "",
+          accionPiso: "Bloquear pedido", accionTecho: "Alerta + aprobación supervisor",
+          maxVendedor: "0.30", emailAprobador: "", ajusteZona: "0.00" },
+        productos:[{ skuId:"GR-MED", base:"5.50", factorVariacion:"1", brecha:"", piso:"4.50", techo:"7.00" }],
+        volumenPorCategoria:{
+          "Granel": [
+            { desde:"5",  hasta:"10", descuento:"0.05", unidad:"S/", combo:false },
+            { desde:"11", hasta:"49", descuento:"0.10", unidad:"S/", combo:true  },
+            { desde:"50", hasta:"999", descuento:"0.15", unidad:"S/", combo:true  },
+          ],
+          "Empacado": [
+            { desde:"1",  hasta:"10", descuento:"0", unidad:"S/", combo:false },
+            { desde:"11", hasta:"15", descuento:"0.05", unidad:"S/", combo:false },
+            { display:"16", desde:"16", hasta:"30", descuento:"0.10", unidad:"S/", combo:true  },
+            { desde:"31", hasta:"35", descuento:"0.15", unidad:"S/", combo:true  },
+            { desde:"36", hasta:"44", descuento:"0.20", unidad:"S/", combo:true  },
+            { desde:"45", hasta:"999", descuento:"0.25", unidad:"S/", combo:true  },
+          ]
+        },
+        promo:{ nombre:"", descuento:"", inicio:"", fin:"" },
+        descuentosExcepcionales: {
+          rutas: [
+            { codigo: "NORTE01", ajuste: "-0.05" }
+          ],
+          tipos: {
+            Urbano: "0.00",
+            Periferia: "-0.15"
+          },
+          modulos: [
+            { nombre: "Norte01 lunes", ajuste: "-0.10" }
+          ],
+          clientes: [
+            { id: "CLI-01", nombre: "Distribuidora San Juan", ajuste: "-0.15", skuId: "GR-MED" }
+          ]
+        }
+      });
+
+      const BASE_DEFAULT_SKU = {
+        "GR-MED": "5.50", "GR-MAY": "5.40", "GR-POR": "4.80",
+        "EM-QUI": "6.20", "EM-COR": "6.35", "EM-OCT": "6.45", "EM-TRE": "6.10",
+      };
+      const baseDefecto = (skuId) => BASE_DEFAULT_SKU[skuId] || "5.50";
+
+      const STEPS = [
+        { id:"alcance",   label:"Alcance",        desc:"Región, canal y segmento", icon:"ti-building-store" },
+        { id:"zona",      label:"Reglas de zona", desc:"Zona, canal y autonomía", icon:"ti-map-pin" },
+        { id:"productos", label:"SKUs",           desc:"Brechas y límites por producto", icon:"ti-package" },
+        { id:"descuentos",label:"Descuentos",     desc:"Volumen, combos y promociones", icon:"ti-receipt-discount" },
+        { id:"simulador", label:"Simular",        desc:"Validar precio sugerido", icon:"ti-calculator" },
+      ];
+
+      function Field({ label, hint, children }) {
+        return (
+          <div style={{ marginBottom:14 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:5 }}>
+              <label style={{ fontSize:12, fontWeight:500, color:"var(--color-text-secondary)", letterSpacing:"0.02em" }}>{label}</label>
+              {hint && <span style={{ fontSize:11, color:"var(--color-text-tertiary)" }}>{hint}</span>}
+            </div>
+            {children}
+          </div>
+        );
+      }
+
+      const inputStyle = {
+        width:"100%", boxSizing:"border-box", fontSize:13,
+        padding:"8px 11px", borderRadius:"var(--border-radius-md)",
+        border:"0.5px solid var(--color-border-secondary)",
+        background:"var(--color-background-primary)",
+        color:"var(--color-text-primary)", outline:"none",
+      };
+
+      function TInput({ label, hint, value, onChange, type="text", placeholder="", min, max, step, disabled, suffix }) {
+        return (
+          <Field label={label} hint={hint}>
+            <div style={{ position:"relative" }}>
+              <input type={type} value={value} onChange={e=>onChange(e.target.value)}
+                placeholder={placeholder} min={min} max={max} step={step} disabled={disabled}
+                style={{ ...inputStyle, paddingRight: suffix?"36px":inputStyle.padding, opacity:disabled?0.5:1 }} />
+              {suffix && <span style={{ position:"absolute", right:11, top:"50%", transform:"translateY(-50%)", fontSize:12, color:"var(--color-text-tertiary)", pointerEvents:"none" }}>{suffix}</span>}
+            </div>
+          </Field>
+        );
+      }
+
+      function TSelect({ label, hint, value, onChange, options, disabled }) {
+        return (
+          <Field label={label} hint={hint}>
+            <select value={value} onChange={e=>onChange(e.target.value)} disabled={disabled}
+              style={{ ...inputStyle, cursor:disabled?"not-allowed":"pointer", opacity:disabled?0.5:1 }}>
+              {options.map(o=><option key={typeof o==="string"?o:o.id} value={typeof o==="string"?o:o.id}>{typeof o==="string"?o:o.nombre}</option>)}
+            </select>
+          </Field>
+        );
+      }
+
+      function Pill({ children, variant="gray" }) {
+        const v = {
+          gray:  { bg:"var(--color-background-secondary)", tx:"var(--color-text-secondary)",  bd:"var(--color-border-tertiary)" },
+          blue:  { bg:"#E6F1FB", tx:"#0C447C", bd:"#B5D4F4" },
+          green: { bg:"#EAF3DE", tx:"#27500A", bd:"#C0DD97" },
+          amber: { bg:"#FAEEDA", tx:"#633806", bd:"#FAC775" },
+          red:   { bg:"#FCEBEB", tx:"#791F1F", bd:"#F7C1C1" },
+          teal:  { bg:"#E1F5EE", tx:"#085041", bd:"#9FE1CB" },
+        };
+        const s = v[variant]||v.gray;
+        return (
+          <span style={{ fontSize:11, fontWeight:500, padding:"3px 8px", borderRadius:99, display:"inline-flex", alignItems:"center", gap:4, background:s.bg, color:s.tx, border:`0.5px solid ${s.bd}` }}>
+            {children}
+          </span>
+        );
+      }
+
+      function InfoBanner({ icon="ti-info-circle", variant="blue", children }) {
+        const v = {
+          blue:  { bg:"#E6F1FB", bd:"#85B7EB", tx:"#0C447C" },
+          amber: { bg:"#FAEEDA", bd:"#EF9F27", tx:"#633806" },
+          green: { bg:"#EAF3DE", bd:"#97C459", tx:"#27500A" },
+          red:   { bg:"#FCEBEB", bd:"#F09595", tx:"#791F1F" },
+        };
+        const s = v[variant]||v.blue;
+        return (
+          <div style={{ display:"flex", gap:10, padding:"10px 13px", borderRadius:"var(--border-radius-md)", background:s.bg, border:`0.5px solid ${s.bd}`, marginBottom:14 }}>
+            <i className={`ti ${icon}`} aria-hidden="true" style={{ fontSize:15, color:s.tx, flexShrink:0, marginTop:1 }} />
+            <div style={{ fontSize:12, color:s.tx, lineHeight:1.6 }}>{children}</div>
+          </div>
+        );
+      }
+
+      function SectionHead({ icon, title }) {
+        return (
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:16 }}>
+            <i className={`ti ${icon}`} aria-hidden="true" style={{ fontSize:15, color:"var(--color-text-tertiary)" }} />
+            <span style={{ fontSize:14, fontWeight:500, color:"var(--color-text-primary)" }}>{title}</span>
+          </div>
+        );
+      }
+
+      function Divider({ label }) {
+        return (
+          <div style={{ display:"flex", alignItems:"center", gap:10, margin:"20px 0 16px" }}>
+            <div style={{ height:"0.5px", flex:1, background:"var(--color-border-tertiary)" }} />
+            <span style={{ fontSize:11, color:"var(--color-text-tertiary)", fontWeight:500, letterSpacing:"0.06em", textTransform:"uppercase" }}>{label}</span>
+            <div style={{ height:"0.5px", flex:1, background:"var(--color-border-tertiary)" }} />
+          </div>
+        );
+      }
+
+      function Grid2({ children }) {
+        return <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0 16px" }}>{children}</div>;
+      }
+      function Grid3({ children }) {
+        return <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"0 12px" }}>{children}</div>;
+      }
+
+      function StepCanal({ s, set }) {
+        const updateScope = (patch) => {
+          const next = { ...s, ...patch };
+          const zonas = getZonas(next.region, next.canal);
+          set({
+            ...next,
+            zona: {
+              ...next.zona,
+              plaza: zonas.includes(next.zona.plaza) ? next.zona.plaza : zonas[0] || "",
+            },
+          });
+        };
+
+        return (
+          <div>
+            <SectionHead icon="ti-building-store" title="Alcance de la estrategia" />
+            <Grid3>
+              <TSelect label="Oficina de venta" value={s.region} onChange={v=>updateScope({region:v})} options={REGIONES} />
+              <TSelect label="Canal de venta" value={s.canal} onChange={v=>updateScope({canal:v})} options={CANALES} />
+              <TSelect label="Segmento de cliente" value={s.segmento} onChange={v=>set({...s,segmento:v})} options={SEGMENTOS} />
+            </Grid3>
+            <Divider label="Ajustes globales" />
+            <Grid3>
+              <TInput label={`Ajuste Oficina (${s.region})`} hint="S/ sobre todos los SKUs" value={s.ajusteOficina || "0.00"} onChange={v=>set({...s, ajusteOficina:v})} type="number" step="0.05" placeholder="0.00" suffix="S/" />
+              <TInput label={`Ajuste Canal (${s.canal})`} hint="S/ sobre todos los SKUs" value={s.ajusteCanal || "0.00"} onChange={v=>set({...s, ajusteCanal:v})} type="number" step="0.05" placeholder="0.00" suffix="S/" />
+              <TInput label="Variación del día" hint="S/ que sube/baja el huevo hoy" value={s.variacionDia || "0.00"} onChange={v=>set({...s, variacionDia:v})} type="number" step="0.01" placeholder="0.00" suffix="S/" />
+            </Grid3>
+          </div>
+        );
+      }
+
+      function StepZona({ s, set }) {
+        const zonasDisponibles = getZonas(s.region, s.canal);
+        const upd = (k,v) => set({ ...s, zona:{ ...s.zona, [k]:v } });
+        return (
+          <div>
+            <SectionHead icon="ti-map-pin" title="Zona y autonomía del vendedor" />
+            <Grid3>
+              <TSelect label={`Zona (${s.region})`} value={s.zona.plaza} onChange={v=>upd("plaza",v)} options={zonasDisponibles} />
+              <TInput label="Módulo" hint="Opcional" value={s.zona.modulo} onChange={v=>upd("modulo",v)} placeholder="Ej. Módulo 3 — La Parada" />
+              <TInput label="Ajuste Zona" hint="S/ flat" value={s.zona.ajusteZona || "0.00"} onChange={v=>upd("ajusteZona",v)} type="number" step="0.05" placeholder="0.00" suffix="S/" />
+            </Grid3>
+            <Grid2>
+              <TSelect label="Precio bajo el piso" value={s.zona.accionPiso} onChange={v=>upd("accionPiso",v)} options={["Bloquear pedido","Alerta + aprobación supervisor"]} />
+              <TSelect label="Precio sobre el techo" value={s.zona.accionTecho} onChange={v=>upd("accionTecho",v)} options={["Bloquear pedido","Alerta + aprobación supervisor"]} />
+            </Grid2>
+            <Grid2>
+              <TInput label="Ajuste máx. vendedor" hint="Tramos S/0.10" value={s.zona.maxVendedor} onChange={v=>upd("maxVendedor",v)} type="number" step="0.10" placeholder="0.30" suffix="S/" />
+              <TInput label="Correo aprobador" value={s.zona.emailAprobador} onChange={v=>upd("emailAprobador",v)} placeholder="supervisor@lacalera.pe" />
+            </Grid2>
+          </div>
+        );
+      }
+
+      function StepProductos({ s, set }) {
+        const upd = (i,k,v) => {
+          const a=[...s.productos];
+          const next = { ...a[i], [k]:v };
+          if (k === "skuId") next.base = baseDefecto(v);
+          a[i]=next;
+          set({...s,productos:a});
+        };
+        const add = () => set({ ...s, productos:[...s.productos,{ skuId:"GR-MED", base:baseDefecto("GR-MED"), factorVariacion:"1", brecha:"", piso:"", techo:"" }] });
+        const del = (i) => { const a=[...s.productos]; a.splice(i,1); set({...s,productos:a}); };
+        const varDiaNum = parseFloat(s.variacionDia) || 0;
+        return (
+          <div>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+              <SectionHead icon="ti-package" title="Precios por SKU" />
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:12, color:"var(--color-text-secondary)" }}>Variación del día</span>
+                <div style={{ display:"flex", alignItems:"center", border:"0.5px solid var(--color-border-secondary)", borderRadius:"var(--border-radius-md)", overflow:"hidden", background:"var(--color-background-primary)" }}>
+                  <input
+                    type="number" step="0.01"
+                    value={s.variacionDia ?? "0.00"}
+                    onChange={e => set({ ...s, variacionDia: e.target.value })}
+                    style={{ fontSize:13, padding:"5px 8px", border:"none", background:"transparent", color: varDiaNum > 0 ? "#27500A" : varDiaNum < 0 ? "#A32D2D" : "var(--color-text-primary)", fontWeight:500, width:72, outline:"none" }}
+                  />
+                  <span style={{ fontSize:12, color:"var(--color-text-tertiary)", paddingRight:8 }}>S/</span>
+                </div>
+                {varDiaNum !== 0 && (
+                  <button onClick={() => set({ ...s, variacionDia: "0.00" })}
+                    style={{ fontSize:11, padding:"4px 8px", borderRadius:"var(--border-radius-md)", border:"0.5px solid var(--color-border-secondary)", background:"none", cursor:"pointer", color:"var(--color-text-tertiary)" }}>
+                    Resetear
+                  </button>
+                )}
+              </div>
+            </div>
+            <div style={{ background:"var(--color-background-primary)", border:"0.5px solid var(--color-border-tertiary)", borderRadius:"var(--border-radius-lg)", overflow:"hidden", marginBottom:10 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr 0.7fr 1fr 1fr 32px", gap:0, padding:"7px 14px", background:"var(--color-background-secondary)", borderBottom:"0.5px solid var(--color-border-tertiary)" }}>
+                {["SKU","Base fija","Precio hoy","Factor var.","Piso","Techo",""].map((h,i)=>(
+                  <div key={i} style={{ fontSize:11, fontWeight:500, color: i===2?"#27500A":"var(--color-text-tertiary)", letterSpacing:"0.04em" }}>{h}</div>
+                ))}
+              </div>
+              {s.productos.map((p,i) => {
+                const inp = { fontSize:13, padding:"6px 8px", borderRadius:"var(--border-radius-md)", border:"0.5px solid var(--color-border-secondary)", background:"var(--color-background-primary)", color:"var(--color-text-primary)", width:"100%", boxSizing:"border-box" };
+                const fv      = parseFloat(p.factorVariacion ?? 1) || 0;
+                const baseNum = parseFloat(p.base) || 0;
+                const efectivo = baseNum + varDiaNum * fv;
+                const tieneVar = varDiaNum !== 0 && fv !== 0;
+                return (
+                  <div key={i} style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr 0.7fr 1fr 1fr 32px", gap:"0 8px", padding:"8px 14px", borderBottom:"0.5px solid var(--color-border-tertiary)", alignItems:"center" }}>
+                    <select value={p.skuId} onChange={e=>upd(i,"skuId",e.target.value)} style={inp}>
+                      {SKUS.map(o=><option key={o.id} value={o.id}>{o.nombre}</option>)}
+                    </select>
+                    <input type="number" step="0.01" value={p.base||""} onChange={e=>upd(i,"base",e.target.value)} placeholder="5.50" style={inp} />
+                    <div style={{ paddingLeft:4 }}>
+                      <div style={{ fontSize:13, fontWeight:500, color: tieneVar ? (varDiaNum>0?"#27500A":"#A32D2D") : "var(--color-text-tertiary)" }}>
+                        S/ {efectivo.toFixed(2)}
+                      </div>
+                      {tieneVar && (
+                        <div style={{ fontSize:10, color:"var(--color-text-tertiary)", marginTop:1 }}>
+                          antes <span style={{ textDecoration:"line-through" }}>S/ {baseNum.toFixed(2)}</span>
+                        </div>
+                      )}
+                    </div>
+                    <input type="number" step="0.1" min="0" max="5" value={p.factorVariacion??""} onChange={e=>upd(i,"factorVariacion",e.target.value)} placeholder="1" style={inp} title="0 = no afectado, 1 = normal, 2 = doble" />
+                    <input type="number" step="0.01" value={p.piso||""} onChange={e=>upd(i,"piso",e.target.value)} placeholder="—" style={inp} />
+                    <input type="number" step="0.01" value={p.techo||""} onChange={e=>upd(i,"techo",e.target.value)} placeholder="—" style={inp} />
+                    {s.productos.length > 1
+                      ? <button onClick={()=>del(i)} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--color-text-tertiary)", fontSize:15, textAlign:"center", padding:0 }}>×</button>
+                      : <div />}
+                  </div>
+                );
+              })}
+              <div style={{ padding:"8px 14px" }}>
+                <button onClick={add} style={{ fontSize:12, cursor:"pointer", background:"none", border:"none", color:"var(--color-text-info)", display:"flex", alignItems:"center", gap:5, padding:0 }}>
+                  <i className="ti ti-plus" aria-hidden="true" style={{ fontSize:13 }} /> Agregar SKU
+                </button>
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:8, justifyContent:"flex-end" }}>
+              <button style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, padding:"6px 12px", borderRadius:"var(--border-radius-md)", border:"0.5px solid var(--color-border-secondary)", background:"none", cursor:"pointer", color:"var(--color-text-secondary)" }}>
+                <i className="ti ti-upload" aria-hidden="true" style={{ fontSize:13 }} /> Importar Excel
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      function StepDescuentos({ s, set }) {
+        const [newRuta, setNewRuta] = useState({ codigo: RUTAS[0].id, ajuste: "-0.05" });
+        const [newModulo, setNewModulo] = useState({ nombre: MODULOS[0].id, ajuste: "-0.10" });
+        const [newCliente, setNewCliente] = useState({ id: CLIENTES[0].id, skuId: SKUS[0].id, ajuste: "-0.15", minJabas: "0" });
+
+        const updV = (cat, i, k, v) => {
+          const a = [...(s.volumenPorCategoria[cat] || [])];
+          a[i] = { ...a[i], [k]: v };
+          set({ ...s, volumenPorCategoria: { ...s.volumenPorCategoria, [cat]: a } });
+        };
+        const addB = (cat) => {
+          const a = [...(s.volumenPorCategoria[cat] || [])];
+          a.push({ desde:"", hasta:"", descuento:"", unidad:"S/", combo:false });
+          set({ ...s, volumenPorCategoria: { ...s.volumenPorCategoria, [cat]: a } });
+        };
+        const delB = (cat, i) => {
+          const a = [...(s.volumenPorCategoria[cat] || [])];
+          a.splice(i, 1);
+          set({ ...s, volumenPorCategoria: { ...s.volumenPorCategoria, [cat]: a } });
+        };
+
+        const updExc = (patch) => {
+          set({
+            ...s,
+            descuentosExcepcionales: {
+              ...(s.descuentosExcepcionales || {}),
+              ...patch
+            }
+          });
+        };
+
+        const addRuta = () => {
+          const rList = [...(s.descuentosExcepcionales?.rutas || [])];
+          if (rList.some(r => r.codigo === newRuta.codigo)) return;
+          rList.push({ ...newRuta });
+          updExc({ rutas: rList });
+        };
+        const delRuta = (code) => {
+          const rList = (s.descuentosExcepcionales?.rutas || []).filter(r => r.codigo !== code);
+          updExc({ rutas: rList });
+        };
+
+        const setTipoVal = (tipo, val) => {
+          const tObj = { ...(s.descuentosExcepcionales?.tipos || { Urbano: "0.00", Periferia: "0.00" }) };
+          tObj[tipo] = val;
+          updExc({ tipos: tObj });
+        };
+
+        const addModulo = () => {
+          const mList = [...(s.descuentosExcepcionales?.modulos || [])];
+          if (mList.some(m => m.nombre === newModulo.nombre)) return;
+          mList.push({ ...newModulo });
+          updExc({ modulos: mList });
+        };
+        const delModulo = (name) => {
+          const mList = (s.descuentosExcepcionales?.modulos || []).filter(m => m.nombre !== name);
+          updExc({ modulos: mList });
+        };
+
+        const addCliente = () => {
+          const cList = [...(s.descuentosExcepcionales?.clientes || [])];
+          if (cList.some(c => c.id === newCliente.id && c.skuId === newCliente.skuId)) return;
+          const cliObj = CLIENTES.find(c => c.id === newCliente.id);
+          cList.push({
+            id: newCliente.id,
+            nombre: cliObj ? cliObj.nombre : newCliente.id,
+            skuId: newCliente.skuId,
+            ajuste: newCliente.ajuste,
+            minJabas: newCliente.minJabas || "0"
+          });
+          updExc({ clientes: cList });
+        };
+        const delCliente = (id, skuId) => {
+          const cList = (s.descuentosExcepcionales?.clientes || []).filter(c => !(c.id === id && c.skuId === skuId));
+          updExc({ clientes: cList });
+        };
+
+        const inp = { fontSize:13, padding:"7px 10px", borderRadius:"var(--border-radius-md)", border:"0.5px solid var(--color-border-secondary)", background:"var(--color-background-primary)", color:"var(--color-text-primary)", width:"100%", boxSizing:"border-box" };
+        const selInp = { ...inp, padding:"7px 6px" };
+
+        return (
+          <div>
+            <SectionHead icon="ti-receipt-discount" title="Descuentos y condiciones comerciales" />
+
+            {CATEGORIAS.map(cat => (
+              <div key={cat} style={{ marginBottom:20 }}>
+                <Divider label={`Escala por volumen - ${cat}`} />
+                <div style={{ background:"var(--color-background-primary)", border:"0.5px solid var(--color-border-tertiary)", borderRadius:"var(--border-radius-lg)", overflow:"hidden" }}>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1.2fr 60px 80px 32px", gap:0, padding:"8px 14px", background:"var(--color-background-secondary)", borderBottom:"0.5px solid var(--color-border-tertiary)" }}>
+                    {["Jabas desde","Jabas hasta","Descuento","Unidad","Combo",""].map((h,i)=>(
+                      <div key={i} style={{ fontSize:11, fontWeight:500, color:"var(--color-text-tertiary)", letterSpacing:"0.04em" }}>{h}</div>
+                    ))}
+                  </div>
+                  {(s.volumenPorCategoria[cat]||[]).map((b,i)=>(
+                    <div key={i} style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1.2fr 60px 80px 32px", gap:"0 10px", padding:"8px 14px", borderBottom:"0.5px solid var(--color-border-tertiary)", alignItems:"center" }}>
+                      <input type="number" value={b.desde} onChange={e=>updV(cat,i,"desde",e.target.value)} placeholder="0" style={inp} />
+                      <input type="number" value={b.hasta} onChange={e=>updV(cat,i,"hasta",e.target.value)} placeholder="49" style={inp} />
+                      <input type="number" step="0.01" value={b.descuento} onChange={e=>updV(cat,i,"descuento",e.target.value)} placeholder="0" style={inp} />
+                      <select value={b.unidad} onChange={e=>updV(cat,i,"unidad",e.target.value)} style={selInp}>
+                        <option value="S/">S/</option>
+                        <option value="%">%</option>
+                      </select>
+                      <div style={{ display:"flex", alignItems:"center", justifyContent:"center" }}>
+                        <input type="checkbox" checked={!!b.combo} onChange={e=>updV(cat,i,"combo",e.target.checked)} id={`cb-${cat}-${i}`} style={{ width:16, height:16, cursor:"pointer" }} />
+                        <label htmlFor={`cb-${cat}-${i}`} style={{ marginLeft:5, fontSize:12, color:"var(--color-text-secondary)", cursor:"pointer" }}>Sí</label>
+                      </div>
+                      <button onClick={()=>delB(cat,i)} aria-label="Eliminar banda" style={{ background:"none", border:"none", cursor:"pointer", color:"var(--color-text-tertiary)", fontSize:16, textAlign:"center" }}>×</button>
+                    </div>
+                  ))}
+                  <div style={{ padding:"8px 14px" }}>
+                    <button onClick={()=>addB(cat)} style={{ fontSize:12, cursor:"pointer", background:"none", border:"none", color:"var(--color-text-info)", display:"flex", alignItems:"center", gap:5, padding:0 }}>
+                      <i className="ti ti-plus" aria-hidden="true" style={{ fontSize:13 }} /> Agregar banda
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <Divider label="Descuentos excepcionales" />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "12px", marginBottom: 20 }}>
+              {/* PANEL 1: RUTAS */}
+              <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "10px 12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <i className="ti ti-map" style={{ fontSize: 14, color: "var(--color-text-info)" }} />
+                  <span style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-primary)" }}>1. Descuentos por Ruta</span>
+                </div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                  <select value={newRuta.codigo} onChange={e => setNewRuta({ ...newRuta, codigo: e.target.value })} style={{ ...selInp, flex: 2 }}>
+                    {RUTAS.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+                  </select>
+                  <input type="number" step="0.01" value={newRuta.ajuste} onChange={e => setNewRuta({ ...newRuta, ajuste: e.target.value })} placeholder="-0.05" style={{ ...inp, flex: 1 }} />
+                  <button onClick={addRuta} style={{ padding: "6px 12px", background: "#0C447C", color: "#FFF", border: "none", borderRadius: "var(--border-radius-md)", cursor: "pointer", fontSize: 12 }}>Agregar</button>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 120, overflowY: "auto" }}>
+                  {(s.descuentosExcepcionales?.rutas || []).map(r => (
+                    <div key={r.codigo} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", background: "var(--color-background-secondary)", borderRadius: "var(--border-radius-md)", fontSize: 12 }}>
+                      <span>Ruta: <strong>{r.codigo}</strong></span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontWeight: 500, color: "#A32D2D" }}>S/ {parseFloat(r.ajuste).toFixed(2)}</span>
+                        <button onClick={() => delRuta(r.codigo)} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--color-text-tertiary)", fontSize: 14 }}>×</button>
+                      </div>
+                    </div>
+                  ))}
+                  {(s.descuentosExcepcionales?.rutas || []).length === 0 && <span style={{ fontSize: 11, color: "var(--color-text-tertiary)", fontStyle: "italic" }}>Sin rutas configuradas</span>}
+                </div>
+              </div>
+
+              {/* PANEL 2: TIPOS */}
+              <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "10px 12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <i className="ti ti-route" style={{ fontSize: 14, color: "var(--color-text-info)" }} />
+                  <span style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-primary)" }}>2. Descuentos por Tipo</span>
+                </div>
+                <Grid2>
+                  <TInput label="Urbano (S/ flat)" value={s.descuentosExcepcionales?.tipos?.Urbano || "0.00"} onChange={v => setTipoVal("Urbano", v)} type="number" step="0.01" suffix="S/" />
+                  <TInput label="Periferia (S/ flat)" value={s.descuentosExcepcionales?.tipos?.Periferia || "0.00"} onChange={v => setTipoVal("Periferia", v)} type="number" step="0.01" suffix="S/" />
+                </Grid2>
+              </div>
+
+              {/* PANEL 3: MODULOS */}
+              <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "10px 12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <i className="ti ti-calendar" style={{ fontSize: 14, color: "var(--color-text-info)" }} />
+                  <span style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-primary)" }}>3. Descuentos por Módulo</span>
+                </div>
+                <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                  <select value={newModulo.nombre} onChange={e => setNewModulo({ ...newModulo, nombre: e.target.value })} style={{ ...selInp, flex: 2 }}>
+                    {MODULOS.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                  </select>
+                  <input type="number" step="0.01" value={newModulo.ajuste} onChange={e => setNewModulo({ ...newModulo, ajuste: e.target.value })} placeholder="-0.10" style={{ ...inp, flex: 1 }} />
+                  <button onClick={addModulo} style={{ padding: "6px 12px", background: "#0C447C", color: "#FFF", border: "none", borderRadius: "var(--border-radius-md)", cursor: "pointer", fontSize: 12 }}>Agregar</button>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 120, overflowY: "auto" }}>
+                  {(s.descuentosExcepcionales?.modulos || []).map(m => (
+                    <div key={m.nombre} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", background: "var(--color-background-secondary)", borderRadius: "var(--border-radius-md)", fontSize: 12 }}>
+                      <span>Módulo: <strong>{m.nombre}</strong></span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontWeight: 500, color: "#A32D2D" }}>S/ {parseFloat(m.ajuste).toFixed(2)}</span>
+                        <button onClick={() => delModulo(m.nombre)} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--color-text-tertiary)", fontSize: 14 }}>×</button>
+                      </div>
+                    </div>
+                  ))}
+                  {(s.descuentosExcepcionales?.modulos || []).length === 0 && <span style={{ fontSize: 11, color: "var(--color-text-tertiary)", fontStyle: "italic" }}>Sin módulos configurados</span>}
+                </div>
+              </div>
+
+              {/* PANEL 4: CLIENTES */}
+              <div style={{ background: "var(--color-background-primary)", border: "0.5px solid var(--color-border-tertiary)", borderRadius: "var(--border-radius-lg)", padding: "10px 12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <i className="ti ti-user" style={{ fontSize: 14, color: "var(--color-text-info)" }} />
+                  <span style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-primary)" }}>4. Descuentos por Cliente Específico</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <select value={newCliente.id} onChange={e => setNewCliente({ ...newCliente, id: e.target.value })} style={{ ...selInp, flex: 1.5 }}>
+                      {CLIENTES.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                    </select>
+                    <select value={newCliente.skuId} onChange={e => setNewCliente({ ...newCliente, skuId: e.target.value })} style={{ ...selInp, flex: 1 }}>
+                      {SKUS.map(sk => <option key={sk.id} value={sk.id}>{sk.id}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input type="number" step="0.01" value={newCliente.ajuste} onChange={e => setNewCliente({ ...newCliente, ajuste: e.target.value })} placeholder="-0.15" style={{ ...inp, flex: 1 }} title="Descuento S/" />
+                    <input type="number" min="0" step="1" value={newCliente.minJabas} onChange={e => setNewCliente({ ...newCliente, minJabas: e.target.value })} placeholder="0" style={{ ...inp, flex: 1 }} title="Mín. jabas para aplicar" />
+                    <button onClick={addCliente} style={{ padding: "6px 12px", background: "#0C447C", color: "#FFF", border: "none", borderRadius: "var(--border-radius-md)", cursor: "pointer", fontSize: 12, whiteSpace:"nowrap" }}>Asociar</button>
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 100, overflowY: "auto" }}>
+                  {(s.descuentosExcepcionales?.clientes || []).map(c => (
+                    <div key={`${c.id}-${c.skuId}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", background: "var(--color-background-secondary)", borderRadius: "var(--border-radius-md)", fontSize: 12 }}>
+                      <span style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{c.nombre} (<strong>{c.skuId}</strong>)</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {parseInt(c.minJabas||0) > 0 && <span style={{ fontSize:11, color:"var(--color-text-tertiary)" }}>≥{c.minJabas} jab.</span>}
+                        <span style={{ fontWeight: 500, color: "#A32D2D" }}>S/ {parseFloat(c.ajuste).toFixed(2)}</span>
+                        <button onClick={() => delCliente(c.id, c.skuId)} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--color-text-tertiary)", fontSize: 14 }}>×</button>
+                      </div>
+                    </div>
+                  ))}
+                  {(s.descuentosExcepcionales?.clientes || []).length === 0 && <span style={{ fontSize: 11, color: "var(--color-text-tertiary)", fontStyle: "italic" }}>Sin clientes específicos configurados</span>}
+                </div>
+              </div>
+            </div>
+
+            <Divider label="Promoción temporal" />
+            <div style={{ background:"var(--color-background-primary)", border:"0.5px solid var(--color-border-tertiary)", borderRadius:"var(--border-radius-lg)", padding:"14px 16px", marginBottom:14 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr", gap:"0 12px" }}>
+                <TInput label="Nombre de la promoción" value={s.promo.nombre} onChange={v=>set({...s,promo:{...s.promo,nombre:v}})} placeholder="Ej. Promo Semana Santa" />
+                <TInput label="Descuento %" value={s.promo.descuento} onChange={v=>set({...s,promo:{...s.promo,descuento:v}})} type="number" step="0.1" min="0" max="100" suffix="%" />
+                <TInput label="Fecha inicio" value={s.promo.inicio} onChange={v=>set({...s,promo:{...s.promo,inicio:v}})} type="date" />
+                <TInput label="Fecha fin" value={s.promo.fin} onChange={v=>set({...s,promo:{...s.promo,fin:v}})} type="date" />
+              </div>
+            </div>
+            <Divider label="Descuento global de gerencia" />
+            <div style={{ background:"var(--color-background-primary)", border:"0.5px solid var(--color-border-tertiary)", borderRadius:"var(--border-radius-lg)", padding:"10px 12px" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <div style={{ flex: 1.5, display: "flex", gap: "12px" }}>
+                  <div style={{ flex: 1 }}>
+                    <TInput label="Descuento global de gerencia" hint="Aplica sobre el acumulado" value={s.descuentoGerencia} onChange={v=>set({...s,descuentoGerencia:v})} type="number" step="0.1" min="0" max="100" placeholder="0" suffix="%" />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <TInput label="Volumen mínimo (Jabas)" hint="Desde qué cantidad aplica" value={s.minJabasGerencia || "0"} onChange={v=>set({...s,minJabasGerencia:v})} type="number" min="0" placeholder="0" suffix="Jabas" />
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize:11, color:"var(--color-text-tertiary)", marginBottom:3 }}>Configuración activa</div>
+                  <div style={{ fontSize:16, fontWeight:500, color: parseFloat(s.descuentoGerencia)>0 ? "#27500A":"var(--color-text-tertiary)", whiteSpace: "nowrap" }}>
+                    {parseFloat(s.descuentoGerencia)>0 ? `${s.descuentoGerencia}% desde ${s.minJabasGerencia || 0} jabas` : "Inactivo"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function StepSimulador({ s }) {
+        const [sim, setSim] = useState({ sku: SKUS[0].id, jabas: "10", ajuste: "0", ruta: "", tipo: "Urbano", modulo: "", cliente: "" });
+        const [res, setRes] = useState(null);
+
+        const calc = () => {
+          const skuObj = SKUS.find(x => x.id === sim.sku);
+          const cat = skuObj ? skuObj.categoria : "Granel";
+          const prod = s.productos.find(p=>p.skuId===sim.sku);
+          const base = prod ? parseFloat(prod.base)||parseFloat(baseDefecto(sim.sku)) : parseFloat(baseDefecto(sim.sku));
+          const factorVar = prod ? parseFloat(prod.factorVariacion??1) : 1;
+          const variacionDia = parseFloat(s.variacionDia)||0;
+          const jabas = parseInt(sim.jabas)||0;
+          const ajV = parseFloat(sim.ajuste)||0;
+          const dctoG = parseFloat(s.descuentoGerencia)||0;
+          const minJabasG = parseInt(s.minJabasGerencia)||0;
+          const piso = parseFloat(prod?.piso)||0;
+          const techo = parseFloat(prod?.techo)||9999;
+          const maxV = parseFloat(s.zona.maxVendedor)||0.30;
+
+          let precio = base;
+          const pasos = [];
+          pasos.push({ label:`Precio base (${skuObj?.nombre || sim.sku})`, v:precio, d:0, tipo:"base" });
+          if (variacionDia !== 0) {
+            const delta = variacionDia * factorVar;
+            precio += delta;
+            const signo = delta > 0 ? "+" : "";
+            pasos.push({ label:`Variación del día ×${factorVar} (${signo}${variacionDia.toFixed(2)} S/)`, v:precio, d:delta, tipo: delta >= 0 ? "add" : "dcto" });
+          }
+          const precioBase = precio;
+
+          const ajusteOficina = parseFloat(s.ajusteOficina || 0);
+          if (ajusteOficina !== 0) {
+            precio += ajusteOficina;
+            pasos.push({ label:`Ajuste Oficina (${s.region})`, v:precio, d:ajusteOficina, tipo:"add" });
+          }
+
+          const ajusteCanal = parseFloat(s.ajusteCanal || 0);
+          if (ajusteCanal !== 0) {
+            precio += ajusteCanal;
+            pasos.push({ label:`Ajuste Canal (${s.canal})`, v:precio, d:ajusteCanal, tipo:"add" });
+          }
+
+          const ajusteZona = parseFloat(s.zona.ajusteZona || 0);
+          if (ajusteZona !== 0) {
+            precio += ajusteZona;
+            pasos.push({ label:`Ajuste comercial de Zona`, v:precio, d:ajusteZona, tipo:"add" });
+          }
+
+          const lista = precio;
+
+          if (dctoG) {
+            if (jabas >= minJabasG) {
+              const d = -(precio*dctoG/100);
+              precio += d;
+              pasos.push({ label:`Descuento gerencia (${dctoG}% desde ${minJabasG} jabas)`, v:precio, d, tipo:"dcto" });
+            } else {
+              pasos.push({ label:`Descuento gerencia (${dctoG}%) no aplica (pedido < ${minJabasG} jabas)`, v:precio, d:0, tipo:"base" });
+            }
+          }
+
+          const bandas = s.volumenPorCategoria[cat] || [];
+          const banda = bandas.find(b=>jabas>=parseInt(b.desde||0)&&jabas<=parseInt(b.hasta||9999));
+
+          if (banda && parseFloat(banda.descuento)) {
+            const valorDcto = parseFloat(banda.descuento);
+            let d = 0;
+            let labelDcto = "";
+            if (banda.unidad === "%") {
+              d = -(precio * valorDcto / 100);
+              labelDcto = `${valorDcto}%`;
+            } else {
+              d = -valorDcto;
+              labelDcto = `S/ ${valorDcto.toFixed(2)}`;
+            }
+            precio += d;
+            pasos.push({ label:`Dcto. volumen ${jabas} jabas (${labelDcto})`, v:precio, d, tipo:"dcto" });
+          }
+
+          const hoy = new Date().toISOString().split("T")[0];
+          if (s.promo.nombre && s.promo.inicio<=hoy && s.promo.fin>=hoy && parseFloat(s.promo.descuento)) {
+            const d = -(precio*parseFloat(s.promo.descuento)/100);
+            precio += d;
+            pasos.push({ label:`Promo: ${s.promo.nombre} (${s.promo.descuento}%)`, v:precio, d, tipo:"promo" });
+          }
+
+          if (sim.ruta) {
+            const matchRuta = (s.descuentosExcepcionales?.rutas || []).find(r => r.codigo === sim.ruta);
+            if (matchRuta && parseFloat(matchRuta.ajuste)) {
+              const val = parseFloat(matchRuta.ajuste) * factorVar;
+              precio += val;
+              pasos.push({ label:`Dcto. ruta ${sim.ruta}${factorVar !== 1 ? ` ×${factorVar}` : ""}`, v:precio, d:val, tipo:"dcto" });
+            }
+          }
+
+          if (sim.tipo) {
+            const base_tipo = parseFloat(s.descuentosExcepcionales?.tipos?.[sim.tipo] || 0);
+            if (base_tipo !== 0) {
+              const val = base_tipo * factorVar;
+              precio += val;
+              pasos.push({ label:`Dcto. tipo zona ${sim.tipo}${factorVar !== 1 ? ` ×${factorVar}` : ""}`, v:precio, d:val, tipo:"dcto" });
+            }
+          }
+
+          if (sim.modulo) {
+            const matchModulo = (s.descuentosExcepcionales?.modulos || []).find(m => m.nombre === sim.modulo);
+            if (matchModulo && parseFloat(matchModulo.ajuste)) {
+              const val = parseFloat(matchModulo.ajuste) * factorVar;
+              precio += val;
+              pasos.push({ label:`Dcto. módulo ${sim.modulo}${factorVar !== 1 ? ` ×${factorVar}` : ""}`, v:precio, d:val, tipo:"dcto" });
+            }
+          }
+
+          if (sim.cliente) {
+            const matchCliente = (s.descuentosExcepcionales?.clientes || []).find(c => c.id === sim.cliente && c.skuId === sim.sku);
+            if (matchCliente && parseFloat(matchCliente.ajuste)) {
+              const minJ = parseInt(matchCliente.minJabas || 0);
+              if (jabas >= minJ) {
+                const val = parseFloat(matchCliente.ajuste) * factorVar;
+                const sufijo = [minJ > 0 ? `≥${minJ} jab.` : "", factorVar !== 1 ? `×${factorVar}` : ""].filter(Boolean).join(", ");
+                pasos.push({ label:`Dcto. cliente ${matchCliente.nombre || sim.cliente}${sufijo ? ` (${sufijo})` : ""}`, v:precio + val, d:val, tipo:"dcto" });
+                precio += val;
+              } else {
+                pasos.push({ label:`Dcto. cliente ${matchCliente.nombre || sim.cliente} no aplica (pedido < ${minJ} jab.)`, v:precio, d:0, tipo:"base" });
+              }
+            }
+          }
+
+          let vendOk = true;
+          if (ajV!==0) {
+            const ajReal = Math.round(ajV/0.10)*0.10;
+            if (Math.abs(ajReal) > maxV+0.001) vendOk = false;
+            precio -= ajReal;
+            pasos.push({ label:`Negociación vendedor (tramos S/0.10)`, v:precio, d:-ajReal, tipo: vendOk?"vendedor":"alerta" });
+          }
+
+          let estado = "ok";
+          if (precio < piso && piso > 0) {
+            estado = s.zona.accionPiso?.includes("Bloquear") ? "bloqueado" : "alerta";
+            precio = piso;
+            pasos.push({ label:`Ajustado al piso del SKU (${sim.sku})`, v:precio, d:0, tipo:"limite" });
+          }
+          if (precio > techo && techo < 9999) {
+            estado = s.zona.accionTecho?.includes("Bloquear") ? "bloqueado" : "alerta";
+            precio = techo;
+            pasos.push({ label:`Ajustado al techo del SKU (${sim.sku})`, v:precio, d:0, tipo:"limite" });
+          }
+
+          setRes({
+            precio:precio.toFixed(2),
+            precioBase:precioBase.toFixed(2),
+            lista:lista.toFixed(2),
+            dctoG,
+            pasos,
+            estado,
+            vendOk,
+            email:s.zona.emailAprobador,
+            scope:{ region:s.region, canal:s.canal, zona:s.zona.plaza },
+            skuNombre:skuObj?.nombre || sim.sku,
+          });
+        };
+
+        const tipoIcon = { base:"ti-currency-dollar", add:"ti-plus", dcto:"ti-discount", promo:"ti-tag", vendedor:"ti-user", alerta:"ti-alert-triangle", limite:"ti-lock" };
+        const tipoColor = { base:"var(--color-text-tertiary)", add:"var(--color-text-success)", dcto:"var(--color-text-success)", promo:"var(--color-text-warning)", vendedor:"var(--color-text-info)", alerta:"var(--color-text-warning)", limite:"var(--color-text-danger)" };
+
+        return (
+          <div>
+            <SectionHead icon="ti-calculator" title="Simulador de precio" />
+            <div style={{ background:"var(--color-background-primary)", border:"0.5px solid var(--color-border-tertiary)", borderRadius:"var(--border-radius-lg)", padding:"16px", marginBottom:14 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:"0 12px", marginBottom:12 }}>
+                <TSelect label="SKU" value={sim.sku} onChange={v=>setSim({...sim,sku:v})} options={SKUS} />
+                <TInput label="Cantidad de jabas" value={sim.jabas} onChange={v=>setSim({...sim,jabas:v})} type="number" min="0" />
+                <TInput label="Ajuste del vendedor" hint={`máx. S/ ${s.zona.maxVendedor||"0.30"}`} value={sim.ajuste} onChange={v=>setSim({...sim,ajuste:v})} type="number" step="0.10" placeholder="0.00" suffix="S/" />
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:"0 12px", marginBottom:14 }}>
+                <TSelect label="Ruta de despacho" value={sim.ruta || ""} onChange={v=>setSim({...sim,ruta:v})} options={[{ id: "", nombre: "-- Sin Ruta --" }, ...RUTAS]} />
+                <TSelect label="Tipo de Zona" value={sim.tipo || "Urbano"} onChange={v=>setSim({...sim,tipo:v})} options={["Urbano", "Periferia"]} />
+                <TSelect label="Módulo de entrega" value={sim.modulo || ""} onChange={v=>setSim({...sim,modulo:v})} options={[{ id: "", nombre: "-- Sin Módulo --" }, ...MODULOS]} />
+                <TSelect label="Cliente destinatario" value={sim.cliente || ""} onChange={v=>setSim({...sim,cliente:v})} options={[{ id: "", nombre: "-- Sin Cliente --" }, ...CLIENTES]} />
+              </div>
+              <button onClick={calc} style={{ width:"100%", padding:"10px 0", fontSize:13, fontWeight:500, background:"#0C447C", color:"#E6F1FB", border:"none", borderRadius:"var(--border-radius-md)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+                <i className="ti ti-calculator" aria-hidden="true" style={{ fontSize:15 }} />
+                Calcular precio sugerido
+              </button>
+            </div>
+
+            {res && (
+              <div>
+                {res.estado === "bloqueado" && (
+                  <div style={{ background:"#FCEBEB", border:"0.5px solid #F09595", borderRadius:"var(--border-radius-md)", padding:"10px 14px", marginBottom:10, display:"flex", alignItems:"center", gap:8 }}>
+                    <i className="ti ti-ban" aria-hidden="true" style={{ fontSize:16, color:"#791F1F" }} />
+                    <span style={{ fontSize:12, color:"#791F1F", fontWeight:500 }}>Pedido bloqueado — precio fuera del rango permitido para este SKU</span>
+                  </div>
+                )}
+                {!res.vendOk && res.estado!=="bloqueado" && (
+                  <div style={{ background:"#FAEEDA", border:"0.5px solid #EF9F27", borderRadius:"var(--border-radius-md)", padding:"10px 14px", marginBottom:10, display:"flex", alignItems:"center", gap:8 }}>
+                    <i className="ti ti-mail" aria-hidden="true" style={{ fontSize:16, color:"#633806" }} />
+                    <div style={{ fontSize:12, color:"#633806" }}>
+                      <strong>Aprobación requerida.</strong> El ajuste del vendedor supera el límite. Se enviará correo a: <span style={{ fontWeight:500 }}>{res.email||"(sin correo configurado)"}</span>
+                    </div>
+                  </div>
+                )}
+                <div style={{ background:"var(--color-background-primary)", border:"0.5px solid var(--color-border-tertiary)", borderRadius:"var(--border-radius-lg)", overflow:"hidden" }}>
+                  <div style={{ padding:"16px", borderBottom:"0.5px solid var(--color-border-tertiary)", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                    <div>
+                      {res.dctoG > 0 && (
+                        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
+                          <span style={{ fontSize:16, color:"var(--color-text-tertiary)", textDecoration:"line-through" }}>S/ {res.precioBase}</span>
+                          <Pill variant="green"><i className="ti ti-discount" aria-hidden="true" style={{ fontSize:11 }} /> {res.dctoG}% dcto. gerencia</Pill>
+                        </div>
+                      )}
+                      <div style={{ display:"flex", alignItems:"baseline", gap:6 }}>
+                        <span style={{ fontSize:11, color:"var(--color-text-tertiary)" }}>Precio sugerido</span>
+                      </div>
+                      <div style={{ fontSize:32, fontWeight:500, color: res.estado==="bloqueado"?"#791F1F": res.estado==="alerta"?"#633806":"#27500A", lineHeight:1.1 }}>
+                        S/ {res.precio}
+                      </div>
+                      <div style={{ fontSize:12, color:"var(--color-text-secondary)", marginTop:6 }}>
+                        {res.skuNombre} · {res.scope.region} / {res.scope.canal} / {res.scope.zona}
+                      </div>
+                    </div>
+                    <div style={{ width:48, height:48, borderRadius:"50%", background: res.estado==="bloqueado"?"#FCEBEB": res.estado==="alerta"?"#FAEEDA":"#EAF3DE", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <i className={`ti ${res.estado==="bloqueado"?"ti-ban":res.estado==="alerta"?"ti-alert-triangle":"ti-check"}`} aria-hidden="true"
+                        style={{ fontSize:22, color: res.estado==="bloqueado"?"#791F1F":res.estado==="alerta"?"#633806":"#27500A" }} />
+                    </div>
+                  </div>
+                  <div style={{ padding:"14px 16px" }}>
+                    <div style={{ fontSize:11, fontWeight:500, color:"var(--color-text-tertiary)", letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:10 }}>Desglose del cálculo</div>
+                    {res.pasos.map((p,i)=>(
+                      <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 0", borderBottom: i<res.pasos.length-1?"0.5px solid var(--color-border-tertiary)":"none" }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                          <i className={`ti ${tipoIcon[p.tipo]||"ti-point"}`} aria-hidden="true" style={{ fontSize:14, color:tipoColor[p.tipo]||"var(--color-text-tertiary)", width:16, textAlign:"center" }} />
+                          <span style={{ fontSize:12, color:"var(--color-text-secondary)" }}>{p.label}</span>
+                        </div>
+                        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                          {p.d!==0 && (
+                            <span style={{ fontSize:12, fontWeight:500, color:p.d<0?"#A32D2D":"#3B6D11" }}>
+                              {p.d>0?"+":""}{p.d.toFixed(2)}
+                            </span>
+                          )}
+                          <span style={{ fontSize:12, color:"var(--color-text-primary)", fontWeight:500, minWidth:60, textAlign:"right" }}>S/ {p.v.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      function App() {
+        const [step, setStep] = useState(0);
+        const [s, setS] = useState(initState());
+        const primerProducto = s.productos[0];
+        const precioBaseResumen = primerProducto?.base || baseDefecto(primerProducto?.skuId || SKUS[0].id);
+
+        const completado = (i) => {
+          if (i===0) return !!s.region && !!s.canal;
+          if (i===1) return !!s.zona.plaza;
+          if (i===2) return s.productos.length > 0 && s.productos.every(p=>p.skuId && p.base);
+          if (i===3) return true;
+          return false;
+        };
+
+        const comps = [
+          <StepCanal s={s} set={setS} />,
+          <StepZona s={s} set={setS} />,
+          <StepProductos s={s} set={setS} />,
+          <StepDescuentos s={s} set={setS} />,
+          <StepSimulador s={s} />,
+        ];
+
+        return (
+          <div style={{ fontFamily:"var(--font-sans)", color:"var(--color-text-primary)" }}>
+            <h2 className="sr-only">Motor de estrategia de precios La Calera — Tomador de Pedidos</h2>
+
+            <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:24, paddingBottom:20, borderBottom:"0.5px solid var(--color-border-tertiary)" }}>
+              <div>
+                <div style={{ fontSize:16, fontWeight:500, marginBottom:5 }}>Estrategia de precios</div>
+                <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                  <Pill variant="blue"><i className="ti ti-map" aria-hidden="true" style={{ fontSize:11 }} /> {s.region}</Pill>
+                  <Pill variant="green"><i className="ti ti-building-store" aria-hidden="true" style={{ fontSize:11 }} /> {s.canal}</Pill>
+                  <Pill variant="gray"><i className="ti ti-map-pin" aria-hidden="true" style={{ fontSize:11 }} /> {s.zona.plaza}</Pill>
+                  <Pill variant="teal"><i className="ti ti-currency-dollar" aria-hidden="true" style={{ fontSize:11 }} /> Base SKU S/ {precioBaseResumen}</Pill>
+                </div>
+              </div>
+              <button onClick={()=>setS(initState())} style={{ fontSize:12, padding:"7px 12px", borderRadius:"var(--border-radius-md)", border:"0.5px solid var(--color-border-secondary)", background:"none", cursor:"pointer", color:"var(--color-text-secondary)", display:"flex", alignItems:"center", gap:5 }}>
+                <i className="ti ti-refresh" aria-hidden="true" style={{ fontSize:13 }} /> Reiniciar
+              </button>
+            </div>
+
+            <div style={{ display:"flex", gap:0, marginBottom:28, borderBottom:"0.5px solid var(--color-border-tertiary)" }}>
+              {STEPS.map((st,i)=>{
+                const done = completado(i);
+                const active = step===i;
+                return (
+                  <button key={i} onClick={()=>setStep(i)} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4, padding:"10px 6px 12px", background:"none", border:"none", borderBottom: active?"2px solid var(--color-text-primary)":"2px solid transparent", cursor:"pointer" }}>
+                    <div style={{ width:30, height:30, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", background: active?"var(--color-background-secondary)": done?"#EAF3DE":"transparent", border: active?"0.5px solid var(--color-border-secondary)": done?"0.5px solid #C0DD97":"none" }}>
+                      {done && !active
+                        ? <i className="ti ti-check" aria-hidden="true" style={{ fontSize:13, color:"#27500A" }} />
+                        : <i className={`ti ${st.icon}`} aria-hidden="true" style={{ fontSize:14, color: active?"var(--color-text-primary)":"var(--color-text-tertiary)" }} />
+                      }
+                    </div>
+                    <span style={{ fontSize:11, fontWeight: active?500:400, color: active?"var(--color-text-primary)":"var(--color-text-tertiary)", whiteSpace:"nowrap" }}>{st.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div style={{ minHeight:320 }}>
+              {comps[step]}
+            </div>
+
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:28, paddingTop:16, borderTop:"0.5px solid var(--color-border-tertiary)" }}>
+              <button onClick={()=>setStep(Math.max(0,step-1))} disabled={step===0}
+                style={{ display:"flex", alignItems:"center", gap:6, fontSize:13, padding:"8px 16px", borderRadius:"var(--border-radius-md)", border:"0.5px solid var(--color-border-secondary)", background:"none", cursor:step===0?"not-allowed":"pointer", opacity:step===0?0.35:1, color:"var(--color-text-primary)" }}>
+                <i className="ti ti-arrow-left" aria-hidden="true" style={{ fontSize:14 }} /> Anterior
+              </button>
+              <div style={{ display:"flex", gap:5 }}>
+                {STEPS.map((_,i)=>(
+                  <div key={i} onClick={()=>setStep(i)} style={{ width: step===i?20:6, height:6, borderRadius:3, background: step===i?"var(--color-text-primary)": completado(i)?"var(--color-border-secondary)":"var(--color-border-tertiary)", cursor:"pointer", transition:"width 0.2s" }} />
+                ))}
+              </div>
+              {step < STEPS.length-1
+                ? <button onClick={()=>setStep(step+1)}
+                    style={{ display:"flex", alignItems:"center", gap:6, fontSize:13, fontWeight:500, padding:"8px 16px", borderRadius:"var(--border-radius-md)", border:"0.5px solid var(--color-border-info)", background:"var(--color-background-info)", cursor:"pointer", color:"var(--color-text-info)" }}>
+                    Siguiente <i className="ti ti-arrow-right" aria-hidden="true" style={{ fontSize:14 }} />
+                  </button>
+                : <button style={{ display:"flex", alignItems:"center", gap:6, fontSize:13, fontWeight:500, padding:"8px 16px", borderRadius:"var(--border-radius-md)", border:"0.5px solid #C0DD97", background:"#EAF3DE", cursor:"pointer", color:"#27500A" }}>
+                    <i className="ti ti-check" aria-hidden="true" style={{ fontSize:14 }} /> Guardar estrategia
+                  </button>
+              }
+            </div>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
+</html>
