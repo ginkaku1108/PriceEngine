@@ -147,6 +147,19 @@
       ];
       const SEGMENTOS = ["Cuenta Clave","Autoservicio","Mayorista","Mercado","Horizontal","Bodega","Hotel / Restaurante"];
 
+      const SKUS_EMP_PROMO = [
+        { id:"EMP-X12-DJ",  nombre:"EMPX12 Doña Jacinta" },
+        { id:"EMP-X12-GL",  nombre:"EMPX12 Gallinas Libres" },
+        { id:"EMP-X15",     nombre:"EMPX15" },
+        { id:"EMP-X30-PET", nombre:"EMPX30 PET" },
+      ];
+      const ZONAS_PROMO = ["CASCO", "CENTRO-NORTE", "SUR-ESTE"];
+      const DCTO_PROMO_DEFAULT = {
+        "CASCO":        { "EMP-X12-DJ":"0.20","EMP-X12-GL":"0.30","EMP-X15":"0.20","EMP-X30-PET":"0.20" },
+        "CENTRO-NORTE": { "EMP-X12-DJ":"0.30","EMP-X12-GL":"0.40","EMP-X15":"0.25","EMP-X30-PET":"0.25" },
+        "SUR-ESTE":     { "EMP-X12-DJ":"0.30","EMP-X12-GL":"0.40","EMP-X15":"0.25","EMP-X30-PET":"0.30" },
+      };
+
       const initState = () => ({
         region: "Lima", canal: "Horizontal", segmento: "Bodega",
         ajusteOficina: "0.00",
@@ -174,6 +187,18 @@
           ]
         },
         promo:{ nombre:"", descuento:"", inicio:"", fin:"" },
+        promocionesTrimestral:[{
+          id:"PT-001", nombre:"Promo Q2 2026",
+          inicio:"2026-04-01", fin:"2026-04-28",
+          maxPorCliente:"10", posicionProducto:"2", clientesElegibles:[],
+          skusEmpacado:[
+            { id:"EMP-X12-DJ",  nombre:"EMPX12 Doña Jacinta" },
+            { id:"EMP-X12-GL",  nombre:"EMPX12 Gallinas Libres" },
+            { id:"EMP-X15",     nombre:"EMPX15" },
+            { id:"EMP-X30-PET", nombre:"EMPX30 PET" },
+          ],
+          descuentos: JSON.parse(JSON.stringify(DCTO_PROMO_DEFAULT))
+        }],
         descuentosExcepcionales: {
           rutas: [
             { codigo: "NORTE01", ajuste: "-0.05" }
@@ -528,6 +553,46 @@
         const inp = { fontSize:13, padding:"7px 10px", borderRadius:"var(--border-radius-md)", border:"0.5px solid var(--color-border-secondary)", background:"var(--color-background-primary)", color:"var(--color-text-primary)", width:"100%", boxSizing:"border-box" };
         const selInp = { ...inp, padding:"7px 6px" };
 
+        const addPromo = () => {
+          set({ ...s, promocionesTrimestral:[...(s.promocionesTrimestral||[]), {
+            id:`PT-${Date.now()}`, nombre:"Nueva promo", inicio:"", fin:"",
+            maxPorCliente:"10", posicionProducto:"2", clientesElegibles:[],
+            skusEmpacado:[], descuentos:{}
+          }]});
+        };
+        const addSkuPromo = (pi, nombre) => {
+          if (!nombre.trim()) return;
+          const a=[...(s.promocionesTrimestral||[])];
+          const id = nombre.trim().toUpperCase().replace(/\s+/g,"-");
+          if (a[pi].skusEmpacado.some(sk=>sk.id===id)) return;
+          a[pi]={ ...a[pi], skusEmpacado:[...a[pi].skusEmpacado, { id, nombre:nombre.trim() }] };
+          set({...s, promocionesTrimestral:a});
+        };
+        const delSkuPromo = (pi, skuId) => {
+          const a=[...(s.promocionesTrimestral||[])];
+          a[pi]={ ...a[pi], skusEmpacado: a[pi].skusEmpacado.filter(sk=>sk.id!==skuId) };
+          set({...s, promocionesTrimestral:a});
+        };
+        const delPromo = (pi) => {
+          const a=[...(s.promocionesTrimestral||[])]; a.splice(pi,1);
+          set({...s, promocionesTrimestral:a});
+        };
+        const updPromo = (pi, patch) => {
+          const a=[...(s.promocionesTrimestral||[])]; a[pi]={...a[pi],...patch};
+          set({...s, promocionesTrimestral:a});
+        };
+        const updMatrix = (pi, zona, skuId, val) => {
+          const a=[...(s.promocionesTrimestral||[])];
+          a[pi]={...a[pi], descuentos:{...a[pi].descuentos,[zona]:{...a[pi].descuentos[zona],[skuId]:val}}};
+          set({...s, promocionesTrimestral:a});
+        };
+        const toggleCliente = (pi, cid) => {
+          const a=[...(s.promocionesTrimestral||[])];
+          const cur=a[pi].clientesElegibles||[];
+          a[pi]={...a[pi], clientesElegibles: cur.includes(cid)?cur.filter(x=>x!==cid):[...cur,cid]};
+          set({...s, promocionesTrimestral:a});
+        };
+
         return (
           <div>
             <SectionHead icon="ti-receipt-discount" title="Descuentos y condiciones comerciales" />
@@ -680,7 +745,7 @@
               </div>
             </div>
             <Divider label="Descuento global de gerencia" />
-            <div style={{ background:"var(--color-background-primary)", border:"0.5px solid var(--color-border-tertiary)", borderRadius:"var(--border-radius-lg)", padding:"10px 12px" }}>
+            <div style={{ background:"var(--color-background-primary)", border:"0.5px solid var(--color-border-tertiary)", borderRadius:"var(--border-radius-lg)", padding:"10px 12px", marginBottom:14 }}>
               <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                 <div style={{ flex: 1.5, display: "flex", gap: "12px" }}>
                   <div style={{ flex: 1 }}>
@@ -698,12 +763,127 @@
                 </div>
               </div>
             </div>
+
+            <Divider label="Promociones trimestrales — 2do empacado" />
+            {(s.promocionesTrimestral||[]).map((promo, pi) => {
+              const hoy = new Date().toISOString().split("T")[0];
+              const activa = promo.inicio && promo.fin && promo.inicio<=hoy && promo.fin>=hoy;
+              const proxima = promo.inicio && promo.inicio>hoy;
+              const estadoColor = activa?"#27500A":proxima?"#633806":"var(--color-text-tertiary)";
+              const estadoLabel = activa?"Activa":proxima?"Próxima":"Vencida";
+              return (
+                <div key={promo.id} style={{ border:"0.5px solid var(--color-border-tertiary)", borderRadius:"var(--border-radius-lg)", marginBottom:10, overflow:"hidden" }}>
+                  {/* Cabecera */}
+                  <div style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", background:"var(--color-background-secondary)", borderBottom:"0.5px solid var(--color-border-tertiary)" }}>
+                    <i className="ti ti-calendar-event" style={{ fontSize:14, color:"var(--color-text-info)" }} />
+                    <input value={promo.nombre} onChange={e=>updPromo(pi,{nombre:e.target.value})}
+                      style={{ flex:1, fontSize:13, fontWeight:500, border:"none", background:"transparent", color:"var(--color-text-primary)", outline:"none" }} />
+                    <span style={{ fontSize:11, fontWeight:600, color:estadoColor, padding:"2px 8px", borderRadius:20, background: activa?"#eaf3de":proxima?"#faeeda":"var(--color-background-secondary)", border:`0.5px solid ${activa?"#b5d89a":proxima?"#ef9f27":"var(--color-border-tertiary)"}` }}>{estadoLabel}</span>
+                    <button onClick={()=>delPromo(pi)} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--color-text-tertiary)", fontSize:14, padding:"2px 6px" }}>×</button>
+                  </div>
+
+                  <div style={{ padding:"12px 14px", display:"flex", flexDirection:"column", gap:12 }}>
+                    {/* Fechas y límite */}
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:"0 12px" }}>
+                      <TInput label="Fecha inicio" value={promo.inicio} onChange={v=>updPromo(pi,{inicio:v})} type="date" />
+                      <TInput label="Fecha fin" value={promo.fin} onChange={v=>updPromo(pi,{fin:v})} type="date" />
+                      <TInput label="Aplica al producto #" hint="2=2do, 3=3ro, 4=4to…" value={promo.posicionProducto||"2"} onChange={v=>updPromo(pi,{posicionProducto:v})} type="number" min="2" max="20" placeholder="2" />
+                      <TInput label="Máx. por cliente/visita" value={promo.maxPorCliente} onChange={v=>updPromo(pi,{maxPorCliente:v})} type="number" min="1" placeholder="10" />
+                    </div>
+
+                    {/* Clientes elegibles */}
+                    <div>
+                      <div style={{ fontSize:11, fontWeight:500, color:"var(--color-text-tertiary)", marginBottom:6, letterSpacing:"0.05em", textTransform:"uppercase" }}>
+                        Clientes elegibles — {promo.clientesElegibles?.length===0?"todos los clientes":`${promo.clientesElegibles.length} seleccionados`}
+                      </div>
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                        {CLIENTES.map(c => {
+                          const sel = (promo.clientesElegibles||[]).includes(c.id);
+                          return (
+                            <button key={c.id} onClick={()=>toggleCliente(pi,c.id)}
+                              style={{ fontSize:11, padding:"4px 10px", borderRadius:20, cursor:"pointer",
+                                border:`0.5px solid ${sel?"#0c447c":"var(--color-border-secondary)"}`,
+                                background: sel?"#e6f1fb":"none",
+                                color: sel?"#0c447c":"var(--color-text-secondary)", fontWeight: sel?600:400 }}>
+                              {c.nombre}
+                            </button>
+                          );
+                        })}
+                        {(promo.clientesElegibles||[]).length>0 && (
+                          <button onClick={()=>updPromo(pi,{clientesElegibles:[]})}
+                            style={{ fontSize:11, padding:"4px 8px", borderRadius:20, cursor:"pointer", border:"0.5px solid var(--color-border-secondary)", background:"none", color:"var(--color-text-tertiary)" }}>
+                            Todos
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Matriz dinámica zona × SKU empacado */}
+                    <div>
+                      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:6 }}>
+                        <div style={{ fontSize:11, fontWeight:500, color:"var(--color-text-tertiary)", letterSpacing:"0.05em", textTransform:"uppercase" }}>
+                          Descuento S/ por zona × SKU empacado
+                        </div>
+                        {/* Agregar SKU inline */}
+                        {(() => {
+                          const [nuevoSku, setNuevoSku] = React.useState("");
+                          return (
+                            <div style={{ display:"flex", gap:5 }}>
+                              <input value={nuevoSku} onChange={e=>setNuevoSku(e.target.value)}
+                                onKeyDown={e=>{ if(e.key==="Enter"){ addSkuPromo(pi,nuevoSku); setNuevoSku(""); }}}
+                                placeholder="Nombre del SKU" style={{ fontSize:11, padding:"3px 8px", borderRadius:"var(--border-radius-md)", border:"0.5px solid var(--color-border-secondary)", width:130 }} />
+                              <button onClick={()=>{ addSkuPromo(pi,nuevoSku); setNuevoSku(""); }}
+                                style={{ fontSize:11, padding:"3px 10px", borderRadius:"var(--border-radius-md)", border:"0.5px solid var(--color-border-secondary)", background:"none", cursor:"pointer", color:"var(--color-text-info)" }}>
+                                + SKU
+                              </button>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      {(promo.skusEmpacado||[]).length === 0
+                        ? <div style={{ fontSize:12, color:"var(--color-text-tertiary)", fontStyle:"italic", padding:"8px 0" }}>Agrega al menos un SKU empacado para configurar los descuentos.</div>
+                        : (
+                          <div style={{ border:"0.5px solid var(--color-border-tertiary)", borderRadius:"var(--border-radius-md)", overflow:"hidden" }}>
+                            <div style={{ display:"grid", gridTemplateColumns:`100px repeat(${promo.skusEmpacado.length},1fr)`, background:"var(--color-background-secondary)", borderBottom:"0.5px solid var(--color-border-tertiary)" }}>
+                              <div style={{ padding:"6px 10px", fontSize:10, fontWeight:500, color:"var(--color-text-tertiary)", letterSpacing:".05em" }}>ZONA</div>
+                              {promo.skusEmpacado.map(sk=>(
+                                <div key={sk.id} style={{ padding:"6px 8px", fontSize:10, fontWeight:500, color:"var(--color-text-tertiary)", display:"flex", alignItems:"center", justifyContent:"space-between", gap:4 }}>
+                                  <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sk.nombre}</span>
+                                  <button onClick={()=>delSkuPromo(pi,sk.id)} title="Quitar SKU"
+                                    style={{ background:"none", border:"none", cursor:"pointer", color:"var(--color-text-tertiary)", fontSize:12, padding:0, lineHeight:1, flexShrink:0 }}>×</button>
+                                </div>
+                              ))}
+                            </div>
+                            {ZONAS_PROMO.map((zona,zi)=>(
+                              <div key={zona} style={{ display:"grid", gridTemplateColumns:`100px repeat(${promo.skusEmpacado.length},1fr)`, borderBottom: zi<ZONAS_PROMO.length-1?"0.5px solid var(--color-border-tertiary)":"none", alignItems:"center" }}>
+                                <div style={{ padding:"6px 10px", fontSize:12, fontWeight:500, color:"var(--color-text-secondary)" }}>{zona}</div>
+                                {promo.skusEmpacado.map(sk=>(
+                                  <div key={sk.id} style={{ padding:"4px 8px" }}>
+                                    <input type="number" step="0.01" min="0"
+                                      value={promo.descuentos?.[zona]?.[sk.id]||""}
+                                      onChange={e=>updMatrix(pi,zona,sk.id,e.target.value)}
+                                      style={{ ...inp, padding:"5px 7px", fontSize:12 }} />
+                                  </div>
+                                ))}
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      }
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            <button onClick={addPromo} style={{ width:"100%", padding:"9px 0", fontSize:12, cursor:"pointer", background:"none", border:"0.5px dashed var(--color-border-secondary)", borderRadius:"var(--border-radius-md)", color:"var(--color-text-secondary)", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+              <i className="ti ti-plus" aria-hidden="true" style={{ fontSize:13 }} /> Nueva promoción trimestral
+            </button>
           </div>
         );
       }
 
       function StepSimulador({ s }) {
-        const [sim, setSim] = useState({ sku: SKUS[0].id, jabas: "10", ajuste: "0", ruta: "", tipo: "Urbano", modulo: "", cliente: "" });
+        const [sim, setSim] = useState({ sku: SKUS[0].id, jabas: "10", ajuste: "0", ruta: "", tipo: "Urbano", modulo: "", cliente: "", tomarPromo: false, promoId: "", promoZona: ZONAS_PROMO[0], promoSku2: "", totalEmpacados: "2" });
         const [res, setRes] = useState(null);
 
         const calc = () => {
@@ -829,6 +1009,24 @@
             }
           }
 
+          if (sim.tomarPromo && sim.promoId) {
+            const promoActiva = (s.promocionesTrimestral||[]).find(p => p.id === sim.promoId);
+            if (promoActiva && sim.promoSku2) {
+              const posicion = parseInt(promoActiva.posicionProducto)||2;
+              const totalEmp = parseInt(sim.totalEmpacados)||0;
+              const aplicaciones = Math.min(Math.floor(totalEmp / posicion), parseInt(promoActiva.maxPorCliente)||10);
+              const dctoUnit = parseFloat(promoActiva.descuentos?.[sim.promoZona]?.[sim.promoSku2] || 0);
+              if (dctoUnit > 0 && aplicaciones > 0) {
+                const skuNombrePromo = (promoActiva.skusEmpacado||[]).find(sk=>sk.id===sim.promoSku2)?.nombre || sim.promoSku2;
+                const totalDcto = -(dctoUnit * aplicaciones);
+                precio += totalDcto;
+                pasos.push({ label:`Promo trim. ${promoActiva.nombre} — ${aplicaciones}× ${skuNombrePromo} (c/${posicion} emp.) · ${sim.promoZona}`, v:precio, d:totalDcto, tipo:"promo" });
+              } else if (aplicaciones === 0 && totalEmp > 0) {
+                pasos.push({ label:`Promo trim. ${promoActiva.nombre} — no aplica (se necesitan ${posicion} empacados, pedido tiene ${totalEmp})`, v:precio, d:0, tipo:"base" });
+              }
+            }
+          }
+
           let vendOk = true;
           if (ajV!==0) {
             const ajReal = Math.round(ajV/0.10)*0.10;
@@ -881,6 +1079,86 @@
                 <TSelect label="Módulo de entrega" value={sim.modulo || ""} onChange={v=>setSim({...sim,modulo:v})} options={[{ id: "", nombre: "-- Sin Módulo --" }, ...MODULOS]} />
                 <TSelect label="Cliente destinatario" value={sim.cliente || ""} onChange={v=>setSim({...sim,cliente:v})} options={[{ id: "", nombre: "-- Sin Cliente --" }, ...CLIENTES]} />
               </div>
+              {/* Promociones trimestrales disponibles */}
+              {(() => {
+                const hoy = new Date().toISOString().split("T")[0];
+                const promosDisp = (s.promocionesTrimestral||[]).filter(p =>
+                  p.inicio && p.fin && p.inicio<=hoy && p.fin>=hoy &&
+                  (p.clientesElegibles?.length===0 || p.clientesElegibles?.includes(sim.cliente))
+                );
+                if (!promosDisp.length) return null;
+                const promoSel = promosDisp.find(p=>p.id===sim.promoId) || promosDisp[0];
+                return (
+                  <div style={{ border:"0.5px solid #b5d89a", borderRadius:"var(--border-radius-md)", padding:"10px 12px", marginBottom:12, background:"#f4faf0" }}>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: sim.tomarPromo?10:0 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        <i className="ti ti-gift" style={{ fontSize:14, color:"#27500A" }} />
+                        <span style={{ fontSize:12, fontWeight:500, color:"#27500A" }}>
+                          {promosDisp.length===1 ? promosDisp[0].nombre : `${promosDisp.length} promos disponibles`}
+                        </span>
+                        <span style={{ fontSize:11, color:"#708197" }}>— máx. {promoSel.maxPorCliente} unid./visita</span>
+                      </div>
+                      <label style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer", fontSize:12, color:"#27500A", fontWeight:500 }}>
+                        <input type="checkbox" checked={sim.tomarPromo}
+                          onChange={e=>setSim({...sim, tomarPromo:e.target.checked, promoId: e.target.checked?(sim.promoId||promosDisp[0].id):sim.promoId})}
+                          style={{ width:14, height:14, cursor:"pointer" }} />
+                        Tomar promoción
+                      </label>
+                    </div>
+                    {sim.tomarPromo && (
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 80px", gap:"0 10px" }}>
+                        {promosDisp.length>1 && (
+                          <div style={{ gridColumn:"1/-1", marginBottom:6 }}>
+                            <select value={sim.promoId} onChange={e=>setSim({...sim,promoId:e.target.value})}
+                              style={{ fontSize:12, padding:"5px 8px", borderRadius:"var(--border-radius-md)", border:"0.5px solid #b5d89a", background:"white", width:"100%" }}>
+                              {promosDisp.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}
+                            </select>
+                          </div>
+                        )}
+                        <div>
+                          <div style={{ fontSize:10, color:"#708197", marginBottom:3, textTransform:"uppercase", letterSpacing:".04em" }}>Zona promo</div>
+                          <select value={sim.promoZona} onChange={e=>setSim({...sim,promoZona:e.target.value})}
+                            style={{ fontSize:12, padding:"5px 8px", borderRadius:"var(--border-radius-md)", border:"0.5px solid #b5d89a", background:"white", width:"100%" }}>
+                            {ZONAS_PROMO.map(z=><option key={z} value={z}>{z}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <div style={{ fontSize:10, color:"#708197", marginBottom:3, textTransform:"uppercase", letterSpacing:".04em" }}>2do empacado</div>
+                          <select value={sim.promoSku2} onChange={e=>setSim({...sim,promoSku2:e.target.value})}
+                            style={{ fontSize:12, padding:"5px 8px", borderRadius:"var(--border-radius-md)", border:"0.5px solid #b5d89a", background:"white", width:"100%" }}>
+                            {(promoSel.skusEmpacado||[]).map(sk=><option key={sk.id} value={sk.id}>{sk.nombre}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <div style={{ fontSize:10, color:"#708197", marginBottom:3, textTransform:"uppercase", letterSpacing:".04em" }}>Total empacados pedido</div>
+                          <input type="number" min="1" value={sim.totalEmpacados}
+                            onChange={e=>setSim({...sim,totalEmpacados:e.target.value})}
+                            style={{ fontSize:12, padding:"5px 8px", borderRadius:"var(--border-radius-md)", border:"0.5px solid #b5d89a", background:"white", width:"100%" }} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize:10, color:"#708197", marginBottom:3, textTransform:"uppercase", letterSpacing:".04em" }}>Aplica</div>
+                          {(() => {
+                            const pid = sim.promoId || promosDisp[0].id;
+                            const p = promosDisp.find(x=>x.id===pid)||promosDisp[0];
+                            const posicion = parseInt(p?.posicionProducto)||2;
+                            const totalEmp = parseInt(sim.totalEmpacados)||0;
+                            const aplicaciones = Math.min(Math.floor(totalEmp/posicion), parseInt(p?.maxPorCliente)||10);
+                            const dctoUnit = parseFloat(p?.descuentos?.[sim.promoZona]?.[sim.promoSku2]||0);
+                            return (
+                              <div style={{ padding:"5px 0" }}>
+                                <span style={{ fontSize:13, fontWeight:600, color: aplicaciones>0?"#27500A":"#708197" }}>
+                                  {aplicaciones>0 ? `${aplicaciones}× -S/ ${dctoUnit.toFixed(2)} = -S/ ${(dctoUnit*aplicaciones).toFixed(2)}` : `— (necesita ${posicion} emp.)`}
+                                </span>
+                                {aplicaciones>0 && <div style={{ fontSize:10, color:"#708197" }}>c/ {posicion} empacados · máx. {p?.maxPorCliente}</div>}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               <button onClick={calc} style={{ width:"100%", padding:"10px 0", fontSize:13, fontWeight:500, background:"#0C447C", color:"#E6F1FB", border:"none", borderRadius:"var(--border-radius-md)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
                 <i className="ti ti-calculator" aria-hidden="true" style={{ fontSize:15 }} />
                 Calcular precio sugerido
